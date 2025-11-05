@@ -23,6 +23,7 @@ New Features:
   - Added multi-object movement via square selection
   - Added export functionality to DOT format
   - Added Zoom In/Out support
+  - Added multiline node text
 
 Fixes & Changes:
   - Node text now wraps to the next line and auto-fits within the node
