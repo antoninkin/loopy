@@ -104,12 +104,14 @@ div[big=yes] .play_button_label{
 **********/
 
 #toolbar{
-	position: absolute;
+	position: fixed;
 	left: 0px;
-	top: calc(33% - 142.5px); /* 33% - half of toolbar height */
+	top: 50%;
+	transform: translateY(-50%);
 
-	width:75px; height:590px;
-	padding: 5px;
+	width:60px;
+	height:auto;
+	padding: 0px;
 	background-color: #ddd;
 
 	-webkit-user-select: none;
@@ -122,8 +124,8 @@ div[big=yes] .play_button_label{
 }
 
 .toolbar_button{
-	width:60px; height:60px;
-	margin: 5px;
+	width:41px; height:41px;
+	margin: 4px;
 	border: 2px solid #ddd;
 	cursor: pointer;
 	background-size: 100% 100%;
@@ -268,9 +270,7 @@ div[big=yes] .play_button_label{
 
 
 /**********
-
 MODAL
-
 **********/
 
 #modal_container{
@@ -318,4 +318,239 @@ MODAL
 }
 #modal iframe{
 	border: none;
+}
+
+/**
+ * RESPONSIVE LAYOUT FOR LOOPY
+ * Makes sidebar scalable for small laptops and tablets
+ */
+
+/* CSS Variables for responsive sizing */
+:root {
+	--sidebar-width: 300px;
+	--sidebar-margin: 25px;
+	--sidebar-font-size: 17px;
+	--toolbar-width: 60px;
+	--component-font-size: 20px;
+}
+
+/* Tablet and small laptop (1024px and below) */
+@media screen and (max-width: 1024px) {
+	:root {
+		--sidebar-width: 250px;
+		--sidebar-margin: 15px;
+		--sidebar-font-size: 15px;
+		--component-font-size: 18px;
+	}
+
+	#sidebar {
+		width: var(--sidebar-width);
+		font-size: var(--sidebar-font-size);
+		overflow-y: auto;
+	}
+
+	#sidebar > div {
+		margin: var(--sidebar-margin);
+	}
+
+	#canvasses {
+		width: calc(100% - var(--sidebar-width));
+	}
+
+	.component_input,
+	.component_button {
+		font-size: var(--component-font-size);
+	}
+
+	.component_textarea {
+		font-size: 14px;
+	}
+
+	#playbar {
+		left: calc(50% - calc(var(--sidebar-width) / 2 + 125px));
+	}
+}
+
+/* Small laptop (900px and below) */
+@media screen and (max-width: 900px) {
+	:root {
+		--sidebar-width: 220px;
+		--sidebar-margin: 12px;
+		--sidebar-font-size: 14px;
+		--toolbar-width: 50px;
+		--component-font-size: 16px;
+	}
+
+	#toolbar {
+		width: var(--toolbar-width);
+	}
+
+	.toolbar_button {
+		width: 35px;
+		height: 35px;
+		margin: 3px;
+	}
+
+	.component_slider {
+		width: 190px;
+	}
+
+	.component_slider_graphic {
+		width: 190px;
+	}
+}
+
+/* Very small screens (768px and below) - collapsible sidebar */
+@media screen and (max-width: 768px) {
+	:root {
+		--sidebar-width: 200px;
+		--sidebar-margin: 10px;
+		--sidebar-font-size: 13px;
+		--component-font-size: 15px;
+	}
+
+	/* Make sidebar collapsible */
+	#sidebar {
+		transition: transform 0.3s ease;
+	}
+
+	#sidebar.collapsed {
+		transform: translateX(100%);
+	}
+
+	/* Add toggle button for sidebar */
+	#sidebar::before {
+		content: '☰';
+		position: absolute;
+		left: -40px;
+		top: 10px;
+		width: 35px;
+		height: 35px;
+		background: #ddd;
+		border-radius: 5px 0 0 5px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		font-size: 20px;
+		cursor: pointer;
+		z-index: 1000;
+	}
+
+	#canvasses {
+		width: 100%;
+	}
+
+	#playbar {
+		left: calc(50% - 125px);
+	}
+}
+
+/* Mobile landscape and portrait */
+@media screen and (max-width: 600px) {
+	:root {
+		--sidebar-width: 100%;
+		--sidebar-margin: 8px;
+		--sidebar-font-size: 12px;
+		--toolbar-width: 45px;
+		--component-font-size: 14px;
+	}
+
+	#sidebar {
+		width: var(--sidebar-width);
+		height: 50vh;
+		top: auto;
+		bottom: 0;
+		right: 0;
+		border-top: 2px solid #999;
+	}
+
+	#sidebar.collapsed {
+		transform: translateY(100%);
+	}
+
+	#sidebar::before {
+		left: 50%;
+		transform: translateX(-50%);
+		top: -40px;
+		width: 60px;
+		border-radius: 5px 5px 0 0;
+		content: '▼';
+	}
+
+	#sidebar.collapsed::before {
+		content: '▲';
+	}
+
+	#canvasses {
+		width: 100%;
+		height: 50vh;
+	}
+
+	#toolbar {
+		width: 100%;
+		height: 45px;
+		top: 0;
+		left: 0;
+		display: flex;
+		flex-direction: row;
+		overflow-x: auto;
+	}
+
+	.toolbar_button {
+		width: 40px;
+		height: 40px;
+		flex-shrink: 0;
+	}
+}
+
+/* Make all interactive elements scalable */
+.component_input {
+	font-size: var(--component-font-size);
+	padding: 4px;
+	height: auto;
+}
+
+.component_textarea {
+	font-size: calc(var(--component-font-size) - 2px);
+	padding: 4px;
+}
+
+.component_button {
+	font-size: var(--component-font-size);
+	padding: 8px;
+}
+
+.mini_button {
+	font-size: calc(var(--sidebar-font-size) - 1px);
+	padding: 2px 4px;
+}
+
+/* Smooth transitions */
+#sidebar,
+#canvasses,
+#toolbar {
+	transition: all 0.3s ease;
+}
+
+/* Scrollable sidebar for overflow content */
+#sidebar {
+	overflow-y: auto;
+	overflow-x: hidden;
+}
+
+#sidebar::-webkit-scrollbar {
+	width: 8px;
+}
+
+#sidebar::-webkit-scrollbar-track {
+	background: #ccc;
+}
+
+#sidebar::-webkit-scrollbar-thumb {
+	background: #888;
+	border-radius: 4px;
+}
+
+#sidebar::-webkit-scrollbar-thumb:hover {
+	background: #666;
 }

@@ -63,6 +63,9 @@ function Loopy(config){
 	// Modal
 	self.modal = new Modal(self);
 
+	// History (Undo/Redo)
+	self.history = new History(self);
+
 	//////////
 	// INIT //
 	//////////
@@ -254,12 +257,22 @@ function Loopy(config){
 	};
 
 	// "BLANK START" DATA:
-	var _blankData = "[[[1,403,223,1,%22something%22,4,50,1,0.2],[2,405,382,1,%22something%2520else%22,5,50,1,0.2]],[[2,1,94,-1,1,0],[1,2,89,1,1,0]],[[609,311,%22need%2520ideas%2520on%2520what%2520to%250Asimulate%253F%2520how%2520about%253A%250A%250A%25E3%2583%25BBtechnology%250A%25E3%2583%25BBenvironment%250A%25E3%2583%25BBeconomics%250A%25E3%2583%25BBbusiness%250A%25E3%2583%25BBpolitics%250A%25E3%2583%25BBculture%250A%25E3%2583%25BBpsychology%250A%250Aor%2520better%2520yet%252C%2520a%250A*combination*%2520of%250Athose%2520systems.%250Ahappy%2520modeling!%22]],[10,25,200],2%5D";
+	var _blankData = '[[[],[],[]]'; // Empty nodes, edges, labels
 
 	self.loadFromURL = function(){
 		var data = _getParameterByName("data");
-		if(!data) data=decodeURIComponent(_blankData);
-		self.model.deserialize(data);
+		if(!data) {
+			// Start with empty canvas
+			self.model.clear();
+			return;
+		}
+
+		try {
+			self.model.deserialize(data);
+		} catch(e) {
+			console.error("Failed to load model from URL:", e);
+			self.model.clear();
+		}
 	};
 
 
@@ -299,6 +312,7 @@ function Loopy(config){
 		// Also, HACK: auto signal
 		var signal = _getParameterByName("signal");
 		if(signal){
+			signal = decodeURIComponent(signal);
 			signal = JSON.parse(signal);
 			var node = self.model.getNode(signal[0]);
 			node.takeSignal({
@@ -345,7 +359,25 @@ function Loopy(config){
 
 	}
 
-	// Zoom keyboard shortcuts
+	/////////////////////////
+	// KEYBOARD SHORTCUTS //
+	////////////////////////
+
+	// Undo: Ctrl+Z or Cmd+Z
+	subscribe("key/undo", function(){
+		if(Key.control){
+			self.history.undo();
+		}
+	});
+
+	// Redo: Ctrl+Y or Cmd+Y
+	subscribe("key/redo", function(){
+		if(Key.control){
+			self.history.redo();
+		}
+	});
+
+	//Zoom
 	subscribe("key/zoomin", function(){
 		if(Key.control){ // Ctrl + or Cmd +
 			self.zoomIn();

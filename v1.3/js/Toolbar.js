@@ -17,6 +17,7 @@ function Toolbar(loopy){
 		var id = options.id;
 		var tooltip = options.tooltip;
 		var callback = options.callback;
+		var isActionButton = options.isActionButton || false; // For undo/redo buttons
 
 		// Add the button
 		var button = new ToolbarButton(self,{
@@ -30,13 +31,14 @@ function Toolbar(loopy){
 		buttonsByID[id] = button;
 
 		// Keyboard shortcut!
-		(function(id){
-			subscribe("key/"+id,function(){
-				loopy.ink.reset(); // also CLEAR INK CANVAS
-				buttonsByID[id].callback();
-			});
-		})(id);
-
+		if(!isActionButton){
+			(function(id){
+				subscribe("key/"+id,function(){
+					loopy.ink.reset(); // also CLEAR INK CANVAS
+					buttonsByID[id].callback();
+				});
+			})(id);
+		}
 	};
 
 	// Add separator
@@ -150,7 +152,23 @@ function Toolbar(loopy){
 		}
 	});
 
-	// Select button
+	// Undo button
+	self.addButton({
+		id: "undo",
+		tooltip: isMacLike ? "UNDO (⌘-Z)" : "UNDO (CTRL-Z)",
+		isActionButton: true,
+		callback: () => loopy.history.undo()
+	});
+
+	// Redo button
+	self.addButton({
+		id: "redo",
+		tooltip: isMacLike ? "REDO (⌘-Y)" : "REDO (CTRL-Y)",
+		isActionButton: true,
+		callback: () => loopy.history.redo()
+	});
+
+	// Select default tool/button
 	buttonsByID.ink.callback();
 
 	// Hide & Show
