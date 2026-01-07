@@ -26,7 +26,8 @@ function Edge(model, config){
 		strength: model.DEFAULT_EDGE_STRENGTH,
 		direction: 1,
 		attenuation: 1, //This is actually 1 - Attenuation
-		speedMultiplier: 1 //this is an edge specific speed multiplier
+		speedMultiplier: 1, //this is an edge specific speed multiplier
+		showLabel: false // Hide +/- label by default
 	});
 
 	self.setDirection = function(value){
@@ -89,17 +90,17 @@ function Edge(model, config){
 		// Speed?
 		var speed = Math.pow(2,self.loopy.signalSpeed);
 		self.signalSpeed = speed/self.getArrowLength()*self.speedMultiplier;
-		
+
 
 		// Move all signals along
 		for(var i=0; i<self.signals.length; i++){
-			
+
 			var signal = self.signals[i];
 			var lastPosition = signal.position;
 			signal.position += self.signalSpeed;
 
-			// If crossed the 0.5 mark... 
-			
+			// If crossed the 0.5 mark...
+
 			if(lastPosition<0.5 && signal.position>=0.5){
 
 				// Multiply by this edge's attenuation to reduce signal!
@@ -119,7 +120,7 @@ function Edge(model, config){
 			// Actually pass it along
 			lastSignal.delta *= self.strength; // flip at the end only!
 			self.to.takeSignal(lastSignal);
-			
+
 			// Pop it, move on down
 			self.removeSignal(lastSignal);
 			lastSignal = self.signals[self.signals.length-1];
@@ -133,7 +134,7 @@ function Edge(model, config){
 	};
 
 	self.drawSignals = function(ctx){
-	
+
 		// Draw each one
 		for(var i=0; i<self.signals.length; i++){
 
@@ -232,7 +233,7 @@ function Edge(model, config){
 		fx=self.from.x*2;
 		fy=self.from.y*2;
 		tx=self.to.x*2;
-		ty=self.to.y*2;	
+		ty=self.to.y*2;
 		if(self.from==self.to){
 			var rotation = self.rotation;
 			rotation *= Math.TAU/360;
@@ -358,7 +359,7 @@ function Edge(model, config){
 
 		// Get angle!
 		var angle = begin2 + (end-begin2)*param;
-		
+
 		// return x & y
 		return{
 			x: w/2 + Math.cos(angle)*r,
@@ -414,16 +415,18 @@ function Edge(model, config){
 		// Stroke!
 		ctx.stroke();
 
-		// Draw label
-		ctx.font = "100 60px sans-serif";
-		ctx.textAlign = "center";
-		ctx.textBaseline = "middle";
-		ctx.save();
-		ctx.translate(lx, ly);
-		ctx.rotate(-a);
-		ctx.fillStyle = model.COLOUR_EDGE_TEXT;
-		ctx.fillText(self.label, 0, 0);
-		ctx.restore();
+		// Draw label (only if showLabel is true)
+		if(self.showLabel){
+			ctx.font = "100 60px sans-serif";
+			ctx.textAlign = "center";
+			ctx.textBaseline = "middle";
+			ctx.save();
+			ctx.translate(lx, ly);
+			ctx.rotate(-a);
+			ctx.fillStyle = model.COLOUR_EDGE_TEXT;
+			ctx.fillText(self.label, 0, 0);
+			ctx.restore();
+		}
 
 		// DRAW SIGNALS
 		self.drawSignals(ctx);

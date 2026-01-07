@@ -28,25 +28,50 @@ function Ink(loopy){
 	// Drawing!
 	self.drawInk = function(){
 
-		if(!Mouse.pressed) return;
+		if(self.strokeData.length < 2) return;
 
-		// Last point
-		var lastPoint = self.strokeData[self.strokeData.length-1];
+		// Clear and redraw all strokes with proper transformation
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+		// Apply the same transformations as the main model canvas (like Dragger.js does)
+		ctx.save();
+
+		var canvasses = document.getElementById("canvasses");
+		var CW = canvasses.clientWidth - _PADDING - _PADDING;
+		var CH = canvasses.clientHeight - _PADDING_BOTTOM - _PADDING;
+		var tx = loopy.offsetX*2;
+		var ty = loopy.offsetY*2;
+		tx -= CW+_PADDING;
+		ty -= CH+_PADDING;
+		var s = loopy.offsetScale;
+		tx = s*tx;
+		ty = s*ty;
+		tx += CW+_PADDING;
+		ty += CH+_PADDING;
+		if(loopy.embedded){
+			tx += _PADDING;
+			ty += _PADDING;
+		}
+		ctx.setTransform(s, 0, 0, s, tx, ty);
 
 		// Style
 		ctx.strokeStyle = "#ccc";
 		ctx.lineWidth = 5;
 		ctx.lineCap = "round";
 
-		// Draw line from last to current
+		// Draw all stroke segments
 		ctx.beginPath();
-		ctx.moveTo(lastPoint[0]*2, lastPoint[1]*2);
-		ctx.lineTo(Mouse.x*2, Mouse.y*2);
+		for(var i=1; i<self.strokeData.length; i++){
+			var prevPoint = self.strokeData[i-1];
+			var currPoint = self.strokeData[i];
+			if(i === 1){
+				ctx.moveTo(prevPoint[0]*2, prevPoint[1]*2);
+			}
+			ctx.lineTo(currPoint[0]*2, currPoint[1]*2);
+		}
 		ctx.stroke();
 
-		// Update last point
-		self.strokeData.push([Mouse.x,Mouse.y]);
-
+		ctx.restore();
 	};
 	self.reset = function(){
 		ctx.clearRect(0,0,canvas.width,canvas.height); // Clear canvas
@@ -59,7 +84,6 @@ function Ink(loopy){
 		if(self.loopy.tool!=Loopy.TOOL_INK) return;
 
 		// New stroke data
-		self.strokeData = [];
 		self.strokeData.push([Mouse.x,Mouse.y]);
 
 		// Draw to canvas!
@@ -73,6 +97,8 @@ function Ink(loopy){
 		if(self.loopy.tool!=Loopy.TOOL_INK) return;
 
 		// Draw ink!
+		if(!Mouse.pressed) return;
+    	self.strokeData.push([Mouse.x, Mouse.y]);
 		self.drawInk();
 
 	});
@@ -86,7 +112,7 @@ function Ink(loopy){
 		if(!Mouse.moved) return;
 
 		/*************************
-		
+
 		Detect what you drew!
 		1. Started in a node?
 		1a. If ended near/in a node, it's an EDGE.
@@ -155,7 +181,7 @@ function Ink(loopy){
 				var translated = _translatePoints(self.strokeData, -startNode.x, -startNode.y);
 				var rotated = _rotatePoints(translated, -angle);
 				var bounds = _getBounds(rotated);
-				
+
 				// Arc!
 				if(Math.abs(bounds.top)>Math.abs(bounds.bottom)) edgeConfig.arc = -bounds.top;
 				else edgeConfig.arc = -bounds.bottom;

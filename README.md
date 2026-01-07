@@ -20,10 +20,16 @@ Check out these [user-made LOOPY's!](http://ncase.me/loopy/v1.1/pages/examples)
 Version 1.3:
 
 New Features:
-  - Added multi-object movement via square selection
-  - Added export functionality to DOT format
-  - Added Zoom In/Out support
-  - Added multiline node text
+  - Detailed action tracking with timestamps
+  - New split node with top and bottom labels
+  - History export/import in JSON format
+  - Edge +/- label visibility toggle
+  - Undo/Redo support
+  - Automatic history saving to browser storage
+  - Multi-object movement via rectangular selection
+  - Export to DOT format
+  - Zoom in/out support
+  - Multiline node text support
 
 Fixes & Changes:
   - Node text now wraps to the next line and auto-fits within the node

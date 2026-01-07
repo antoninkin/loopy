@@ -28,7 +28,9 @@ function Node(model, config){
 		radius: model.DEFAULT_NODE_RADIUS,
 		gain: model.DEFAULT_NODE_GAIN,
 		strength: model.DEFAULT_SIGNAL_SIZE,
-		active: 1
+		active: 0, // 0=inactive, 1=active, 2=split
+		topLabel: undefined,      // Split node top label
+		bottomLabel: undefined   // Split node bottom label
 	});
 
 	// Value: from 0 to 1
@@ -50,6 +52,9 @@ function Node(model, config){
 
 		// ONLY WHEN PLAYING
 		if(self.loopy.mode!=Loopy.MODE_PLAY) return;
+
+		// Split nodes (active=2) don't have controls
+		if(self.active === 2) return;
 
 		// If moused over this, show it, or not.
 		_controlsSelected = self.isPointInNode(Mouse.x, Mouse.y);
@@ -230,89 +235,91 @@ function Node(model, config){
 		ctx.fillStyle = color;
 		ctx.fill();
 
-		// Text!
-		var fontsize = 38;
-		ctx.font = "normal "+fontsize+"px sans-serif";
-		ctx.textAlign = "center";
-		ctx.textBaseline = "middle";
-		ctx.fillStyle = "#000";
+		// Text rendering - check for split node first
+        if (SplitNodeRenderer.isSplitNode(self)) {
+            // Split node: render dual labels
+            SplitNodeRenderer.renderLabels(ctx, self, r);
+        } else {
+            // Normal node: existing text rendering code
+            var fontsize = 38;
+            ctx.font = "normal "+fontsize+"px sans-serif";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "#000";
 
-		// Calculate max width for text with padding
-		var maxWidth = r*2 - 30; // (r*2 - buffer) smaller buffer → more text space
+            var maxWidth = r*2 - 30;
 
-		// Word wrap function
-		function wrapText(text, maxWidth) {
-			var words = text.split(' ');
-			var lines = [];
-			var currentLine = '';
+            function wrapText(text, maxWidth) {
+                var words = text.split(' ');
+                var lines = [];
+                var currentLine = '';
 
-			for(var i = 0; i < words.length; i++) {
-				var word = words[i];
-				var testLine = currentLine + (currentLine ? ' ' : '') + word;
-				var testWidth = ctx.measureText(testLine).width;
+                for(var i = 0; i < words.length; i++) {
+                    var word = words[i];
+                    var testLine = currentLine + (currentLine ? ' ' : '') + word;
+                    var testWidth = ctx.measureText(testLine).width;
 
-				if(testWidth > maxWidth && currentLine) {
-					lines.push(currentLine);
-					currentLine = word;
-				} else {
-					currentLine = testLine;
-				}
-			}
-			if(currentLine) {
-				lines.push(currentLine);
-			}
+                    if(testWidth > maxWidth && currentLine) {
+                        lines.push(currentLine);
+                        currentLine = word;
+                    } else {
+                        currentLine = testLine;
+                    }
+                }
+                if(currentLine) {
+                    lines.push(currentLine);
+                }
 
-			// If still no wrapping happened and it's too long, break the word
-			if(lines.length === 1 && ctx.measureText(lines[0]).width > maxWidth) {
-				var longWord = lines[0];
-				lines = [];
-				var currentChunk = '';
+                if(lines.length === 1 && ctx.measureText(lines[0]).width > maxWidth) {
+                    var longWord = lines[0];
+                    lines = [];
+                    var currentChunk = '';
 
-				for(var j = 0; j < longWord.length; j++) {
-					var testChunk = currentChunk + longWord[j];
-					if(ctx.measureText(testChunk).width > maxWidth && currentChunk) {
-						lines.push(currentChunk);
-						currentChunk = longWord[j];
-					} else {
-						currentChunk = testChunk;
-					}
-				}
-				if(currentChunk) lines.push(currentChunk);
-			}
+                    for(var j = 0; j < longWord.length; j++) {
+                        var testChunk = currentChunk + longWord[j];
+                        if(ctx.measureText(testChunk).width > maxWidth && currentChunk) {
+                            lines.push(currentChunk);
+                            currentChunk = longWord[j];
+                        } else {
+                            currentChunk = testChunk;
+                        }
+                    }
+                    if(currentChunk) lines.push(currentChunk);
+                }
 
-			return lines;
-		}
+                return lines;
+            }
 
-		// Get wrapped lines
-		var lines = wrapText(self.label, maxWidth);
+            var lines = wrapText(self.label, maxWidth);
+            var lineHeight = fontsize * 1.2;
+            var totalHeight = lines.length * lineHeight;
+            var maxLines = Math.floor((r*2 - 20) / lineHeight);
 
-		// Adjust font size if we have too many lines
-		var lineHeight = fontsize * 1.2;
-		var totalHeight = lines.length * lineHeight;
-		var maxLines = Math.floor((r*2 - 20) / lineHeight);
+            while(totalHeight > r*2 - 20 && fontsize > 16) {
+                fontsize -= 2;
+                ctx.font = "normal "+fontsize+"px sans-serif";
+                lineHeight = fontsize * 1.2;
+                lines = wrapText(self.label, maxWidth);
+                totalHeight = lines.length * lineHeight;
+            }
 
-		// Reduce font size if needed to fit vertically
-		while(totalHeight > r*2 - 20 && fontsize > 16) {
-			fontsize -= 2;
-			ctx.font = "normal "+fontsize+"px sans-serif";
-			lineHeight = fontsize * 1.2;
-			lines = wrapText(self.label, maxWidth);
-			totalHeight = lines.length * lineHeight;
-		}
+            if(lines.length > maxLines && maxLines > 0) {
+                lines = lines.slice(0, maxLines);
+                if(maxLines > 1) {
+                    lines[maxLines - 1] = lines[maxLines - 1].substring(0, lines[maxLines - 1].length - 3) + '...';
+                }
+            }
 
-		// If still too many lines, truncate
-		if(lines.length > maxLines && maxLines > 0) {
-			lines = lines.slice(0, maxLines);
-			if(maxLines > 1) {
-				lines[maxLines - 1] = lines[maxLines - 1].substring(0, lines[maxLines - 1].length - 3) + '...';
-			}
-		}
+            var startY = -(lines.length - 1) * lineHeight / 2;
+            for(var i = 0; i < lines.length; i++) {
+                ctx.fillText(lines[i], 0, startY + i * lineHeight);
+            }
+        }
 
-		// Draw each line
-		var startY = -(lines.length - 1) * lineHeight / 2;
-		for(var i = 0; i < lines.length; i++) {
-			ctx.fillText(lines[i], 0, startY + i * lineHeight);
-		}
+		// SPLIT NODE DIVIDER (active=2)
+        if (SplitNodeRenderer.isSplitNode(self)) {
+            SplitNodeRenderer.renderDivider(ctx, r, color);
+        }
 
 		// WOBBLE CONTROLS
 		var cl = 40;

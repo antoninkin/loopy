@@ -302,12 +302,15 @@ function Model(loopy){
 				Math.round(node.x),
 				Math.round(node.y),
 				node.init,
-				encodeURIComponent(encodeURIComponent(node.label)),
+				encodeURIComponent(node.label),
 				node.hue,
 				node.radius,
 				node.gain,
 				node.strength,
-				node.active
+				node.active,
+				// Add split node labels (indices 10, 11)
+				node.topLabel !== undefined ? encodeURIComponent(node.topLabel) : "",
+				node.bottomLabel !== undefined ? encodeURIComponent(node.bottomLabel) : ""
 			]);
 		}
 		data.push(nodes);
@@ -322,6 +325,7 @@ function Model(loopy){
 			// 3 - strength
 			// 4 - speedMultiplier
 			// 5 - rotation (optional)
+			// 6 - showLabel (optional)
 			var dataEdge = [
 				edge.from.id,
 				edge.to.id,
@@ -332,6 +336,8 @@ function Model(loopy){
 			if(dataEdge.f==dataEdge.t){
 				dataEdge.push(Math.round(edge.rotation));
 			}
+			// Always add showLabel as last element (default false)
+			dataEdge.push(edge.showLabel ? 1 : 0);
 			edges.push(dataEdge);
 		}
 		data.push(edges);
@@ -346,7 +352,7 @@ function Model(loopy){
 			labels.push([
 				Math.round(label.x),
 				Math.round(label.y),
-				encodeURIComponent(encodeURIComponent(label.text))
+				encodeURIComponent(label.text)
 			]);
 		}
 		data.push(labels);
@@ -365,8 +371,9 @@ function Model(loopy){
 
 		// Return as string!
 		var dataString = JSON.stringify(data);
-		dataString = dataString.replace(/"/gi, "%22"); // and ONLY URIENCODE THE QUOTES
-		dataString = dataString.substr(0, dataString.length-1) + "%5D";// also replace THE LAST CHARACTER
+		dataString = encodeURIComponent(dataString);
+		// dataString = dataString.replace(/"/gi, "%22"); // and ONLY URIENCODE THE QUOTES
+		// dataString = dataString.substr(0, dataString.length-1) + "%5D";// also replace THE LAST CHARACTER
 		return dataString;
 
 	};
@@ -375,14 +382,15 @@ function Model(loopy){
 
 		self.clear();
 
-		var data = JSON.parse(dataString);
+		let data;
+		try {
+			data = JSON.parse(decodeURIComponent(dataString));
+		} catch(e) {
+			console.error("Failed to parse JSON:", e, dataString);
+			return;
+		}
 
-		// Get from array!
-		var nodes = data[0];
-		var edges = data[1];
-		var labels = data[2];
-		var settings = data[3]
-		var UID = data[4];
+		const [nodes, edges, labels, settings, UID] = data;
 
 		// Nodes
 		for(var i=0;i<nodes.length;i++){
@@ -397,7 +405,10 @@ function Model(loopy){
 				radius: node[6],
 				gain: node[7],
 				strength: node[8],
-				active: node[9]
+				active: node[9],
+				// Restore split node labels
+				topLabel: node[10] ? decodeURIComponent(node[10]) : undefined,
+				bottomLabel: node[11] ? decodeURIComponent(node[11]) : undefined
 			});
 		}
 
@@ -414,6 +425,9 @@ function Model(loopy){
 				speedMultiplier: edge[4]
 			};
 			if(edge[5]) edgeConfig.rotation=edge[5];
+			// showLabel: check last element, default to false
+			var lastIdx = edge.length - 1;
+			edgeConfig.showLabel = (edge[lastIdx] === 1);
 			self.addEdge(edgeConfig);
 		}
 
@@ -434,6 +448,19 @@ function Model(loopy){
 		// META.
 		Node._UID = UID;
 
+		// Validation patch: remove edges referencing missing nodes
+		self.edges = self.edges.filter(edge => {
+			const fromNode = self.getNode(edge.from?.id || edge.from);
+			const toNode = self.getNode(edge.to?.id || edge.to);
+			if (!fromNode || !toNode) {
+				console.warn("Removed invalid edge referencing missing node:", edge);
+				return false;
+			}
+			// Repair references if theyÃ¢â‚¬â„¢re numeric
+			edge.from = fromNode;
+			edge.to = toNode;
+			return true;
+		});
 	};
 
 	self.clear = function(){
@@ -447,6 +474,14 @@ function Model(loopy){
 		while(self.labels.length>0){
 			self.labels[0].kill();
 		}
+
+		// Clear any signals
+		Edge.allSignals = [];
+
+		// Force canvas clear and redraw
+		ctx.clearRect(0, 0, self.canvas.width, self.canvas.height);
+		_canvasDirty = true;
+		drawCountdown = drawCountdownFull;
 	};
 
 	/////////////////////////
@@ -547,10 +582,10 @@ function Model(loopy){
 
 				// Clean text for comment - remove special Unicode characters
 				var labelText = label.text
-					.replace(/[・]/g, '*')  // Replace bullet points with asterisks
+					.replace(/[Ã£Æ’Â»]/g, '*')  // Replace bullet points with asterisks
 					.replace(/[""]/g, '"')  // Replace smart quotes with regular quotes
 					.replace(/['']/g, "'")  // Replace smart apostrophes
-					.replace(/[—–]/g, '-')  // Replace em/en dashes with hyphens
+					.replace(/[Ã¢â‚¬â€Ã¢â‚¬â€œ]/g, '-')  // Replace em/en dashes with hyphens
 					.replace(/[^\x00-\x7F]/g, '')  // Remove other non-ASCII characters
 					.replace(/\n/g, ' ')    // Replace newlines with spaces
 					.replace(/\s+/g, ' ')   // Collapse multiple spaces
@@ -584,10 +619,10 @@ function Model(loopy){
 				// Add as actual node if positions included
 				if(includePositions) {
 					var cleanText = label.text
-						.replace(/[・]/g, '*')
+						.replace(/[Ã£Æ’Â»]/g, '*')
 						.replace(/[""]/g, '"')
 						.replace(/['']/g, "'")
-						.replace(/[—–]/g, '-')
+						.replace(/[Ã¢â‚¬â€Ã¢â‚¬â€œ]/g, '-')
 						.replace(/[^\x00-\x7F]/g, '')
 						.replace(/"/g, '\\"')
 						.replace(/\n/g, '\\n');
